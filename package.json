@@ -1,0 +1,66 @@
+{
+  "name": "opticert",
+  "productName": "OptiCert",
+  "version": "1.0.0",
+  "description": "OptiCert — diagnostico, grading y certificado de confianza para moviles usados (ADB).",
+  "author": "EnMaNueL-G (OptiSuite)",
+  "license": "GPL-3.0",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron . --selftest",
+    "protect": "node scripts/protect.js",
+    "dist": "node scripts/protect.js && electron-builder --win --x64",
+    "pack": "node scripts/protect.js && electron-builder --dir"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.3"
+  },
+  "devDependencies": {
+    "@electron/fuses": "^2.1.2",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "javascript-obfuscator": "^5.4.3",
+    "rcedit": "^5.0.2"
+  },
+  "build": {
+    "appId": "app.optisuite.opticert",
+    "productName": "OptiCert",
+    "copyright": "Copyright (c) 2026 OptiSuite",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "build-obf/**/*",
+      "assets/**/*",
+      "build/icon.ico",
+      "package.json",
+      "!src/**/*"
+    ],
+    "extraMetadata": {
+      "main": "build-obf/main/main.js"
+    },
+    "asar": true,
+    "afterPack": "scripts/afterPack.js",
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "OptiCert"
+    }
+  }
+}

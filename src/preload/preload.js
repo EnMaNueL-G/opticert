@@ -1,0 +1,30 @@
+'use strict';
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('opti', {
+  init: () => ipcRenderer.invoke('app:init'),
+  devices: () => ipcRenderer.invoke('cert:devices'),
+  diagnose: (serial) => ipcRenderer.invoke('cert:diagnose', serial),
+  generate: (payload) => ipcRenderer.invoke('cert:generate', payload),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setSettings: (s) => ipcRenderer.invoke('settings:set', s),
+  listingBuild: (payload) => ipcRenderer.invoke('listing:build', payload),
+  listingSaveCsv: (payload) => ipcRenderer.invoke('listing:saveCsv', payload),
+  wipeRecord: (payload) => ipcRenderer.invoke('wipe:record', payload),
+  thermalTest: (payload) => ipcRenderer.invoke('thermal:test', payload),
+  onThermal: (cb) => ipcRenderer.on('cert:thermal', (_e, r) => cb(r)),
+  funcDetect: (serial) => ipcRenderer.invoke('func:detect', serial),
+  funcVibrate: (serial) => ipcRenderer.invoke('func:vibrate', serial),
+  funcCamera: (payload) => ipcRenderer.invoke('func:camera', payload),
+  funcCamFrame: (serial) => ipcRenderer.invoke('func:camFrame', serial),
+  netSample: (serial) => ipcRenderer.invoke('net:sample', serial),
+  buttonsListen: (serial) => ipcRenderer.invoke('buttons:listen', serial),
+  buttonsStop: () => ipcRenderer.invoke('buttons:stop'),
+  onButton: (cb) => ipcRenderer.on('cert:button', (_e, k) => cb(k)),
+  adbExec: (payload) => ipcRenderer.invoke('adb:exec', payload),
+  adbWifi: (serial) => ipcRenderer.invoke('adb:wifi', serial),
+  certsList: () => ipcRenderer.invoke('certs:list'),
+  openPath: (p) => ipcRenderer.invoke('app:openPath', p),
+  openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
+  onStep: (cb) => ipcRenderer.on('cert:step', (_e, m) => cb(m)),
+});

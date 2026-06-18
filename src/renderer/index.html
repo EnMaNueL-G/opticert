@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+<title>OptiCert</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- Top -->
+  <header class="top">
+    <svg class="logo" viewBox="0 0 48 48" aria-label="OptiCert">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs>
+      <path d="M24 3 L40 9 V24 C40 35 33 42 24 45 C15 42 8 35 8 24 V9 Z" fill="url(#lg)"/>
+      <path d="M24 3 L40 9 V24 C40 35 33 42 24 45 C15 42 8 35 8 24 V9 Z" fill="none" stroke="#bff7e3" stroke-opacity=".35" stroke-width="1"/>
+      <path d="M15.5 24.5 l6 6 l11.5 -13.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="title">Opti<b>Cert</b><small>Lab de certificación</small></div>
+    <div class="dev">
+      <select id="device"><option value="">— sin dispositivos —</option></select>
+      <button class="ic-btn" id="refresh" title="Actualizar">⟳</button>
+      <button class="ic-btn" id="wifiBtn" title="Pasar a WiFi-ADB (desconectar cable)">📶</button>
+    </div>
+    <button class="scanbtn" id="diagBtn">▶ Escanear dispositivo</button>
+    <div class="spacer"></div>
+    <span class="chip" id="adbPill">ADB</span>
+    <button class="ic-btn" id="aboutBtn" title="Acerca de · Apoyo">❤</button>
+    <button class="ic-btn" id="consoleBtn" title="Consola ADB (ejecutar comandos)">&gt;_</button>
+    <button class="ic-btn" id="historyBtn" title="Historial de certificados">🕘</button>
+    <button class="ic-btn" id="settingsBtn" title="Ajustes">⚙</button>
+    <button class="ic-btn" id="openOut" title="Carpeta de certificados">🗁</button>
+  </header>
+
+  <!-- Cockpit -->
+  <main class="cockpit idle" id="cockpit">
+    <!-- Scanner -->
+    <section class="scanner">
+      <div class="phone" id="phone"><div class="notch"></div><div class="scanline"></div><div class="glyph">📱</div></div>
+      <div class="dev-name" id="devName">Sin escanear</div>
+      <div class="dev-imei" id="devImei">IMEI —</div>
+      <div class="imei-flag" id="imeiFlag" style="display:none"></div>
+      <div style="margin-top:14px;width:100%;font-size:12.5px" id="devSpecs"></div>
+    </section>
+
+    <!-- Gauges -->
+    <section class="center">
+      <div class="gauges" id="gauges"></div>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <!-- Verdict -->
+    <section class="verdict">
+      <div class="seal" id="seal"><div class="ring"></div><div class="scallop"></div><div class="letter" id="sealLetter" style="color:var(--mut)">—</div></div>
+      <div class="glabel" id="gLabel">Pendiente de escaneo</div>
+      <div class="ready" id="ready" style="display:none"></div>
+      <ul class="flags" id="flags"></ul>
+      <button class="genbtn" id="genBtn" disabled>📜 Emitir certificado</button>
+      <div class="vactions" id="vactions" style="display:none">
+        <button class="ic-btn" id="funcBtn" title="Pruebas funcionales (cámara, micro, táctil…)">🧪 Funcional</button>
+        <button class="ic-btn" id="thermBtn" title="Test de estrés térmico">🌡️ Térmico</button>
+        <button class="ic-btn" id="wipeBtn" title="Grabar el borrado (prueba RGPD)">🎥 Borrado</button>
+        <button class="ic-btn" id="listBtn" title="Generar anuncio para marketplace">🏷️ Anuncio</button>
+      </div>
+      <label style="margin-top:8px;font-size:12px;color:var(--mut)"><input type="checkbox" id="wiped"> Datos del equipo ya borrados</label>
+      <div class="cert-ok" id="certOut" style="display:none"></div>
+    </section>
+  </main>
+
+  <div class="ticker" id="ticker">Listo. Conecta un móvil y pulsa “Escanear dispositivo”.</div>
+</div>
+
+<!-- Settings -->
+<div class="modal-bg" id="mset">
+  <div class="modal">
+    <h2>Ajustes</h2>
+    <label>Nombre de tu tienda (sale en el certificado)</label>
+    <input id="setShop" placeholder="Shopping Móvil">
+    <label>Técnico / operario</label>
+    <input id="setTech" placeholder="tu nombre">
+    <label>Proveedor de verificación IMEI (blacklist en tiempo real)</label>
+    <select id="setImeiProv" style="width:100%;background:var(--bg1);border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:var(--ink)">
+      <option value="">— ninguno (solo Luhn+TAC, gratis) —</option>
+      <option value="imei.info">IMEI.info (recomendada · ~$0.02)</option>
+      <option value="imeicheck">imeicheck.com</option>
+      <option value="zylalabs">Zylalabs</option>
+      <option value="custom">Personalizado (endpoint propio)</option>
+    </select>
+    <label>Clave API (BYOK)</label>
+    <input id="setImeiKey" placeholder="pega tu clave del proveedor">
+    <label>Endpoint personalizado (solo si eliges "Personalizado"; usa {imei} y {key})</label>
+    <input id="setImeiUrl" placeholder="https://tu-api/check?imei={imei}&key={key}">
+    <div class="note">Sin proveedor, el IMEI igual se valida con <b>Luhn + TAC</b> (real, gratis). Con clave: blacklist/robo + modelo en tiempo real (recomendado: <b>IMEI.info</b>, desde $5).</div>
+    <div class="foot"><button class="btn" id="setCancel">Cerrar</button><button class="btn primary" id="setSave">Guardar</button></div>
+  </div>
+</div>
+<!-- Anuncio -->
+<div class="modal-bg" id="mlist">
+  <div class="modal" style="width:min(560px,94vw)">
+    <h2>🏷️ Anuncio para marketplace</h2>
+    <label>Título <button class="btn" data-copy="lstTitle" style="float:right;padding:3px 8px;font-size:11px">copiar</button></label>
+    <input id="lstTitle" readonly>
+    <label>Precio sugerido (orientativo)</label>
+    <input id="lstPrice" readonly style="max-width:140px">
+    <label>Descripción <button class="btn" data-copy="lstDesc" style="float:right;padding:3px 8px;font-size:11px">copiar</button></label>
+    <textarea id="lstDesc" readonly style="width:100%;height:150px;background:var(--bg1);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:9px;font:inherit"></textarea>
+    <div class="note">Precio orientativo (ajustable). OptiCert genera el anuncio; tú lo publicas en Back Market / Wallapop / eBay.</div>
+    <div class="foot"><button class="btn" id="lstCsv">⬇ Exportar CSV</button><button class="btn primary" id="lstClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Pruebas funcionales -->
+<div class="modal-bg" id="mfunc">
+  <div class="modal" style="width:min(600px,94vw)">
+    <h2>🧪 Pruebas funcionales</h2>
+    <div class="note">Pulsa el botón de prueba (vibra, abre cámara…) o pruébalo en el móvil y marca ✓/✗. Se incluye en el certificado.</div>
+    <div id="funcList" style="max-height:54vh;overflow:auto;margin-top:10px"></div>
+    <div class="foot"><span id="funcSummary" style="margin-right:auto;color:var(--mut);font-size:12.5px"></span><button class="btn" id="funcClose">Cerrar</button><button class="btn primary" id="funcSave">Guardar resultado</button></div>
+  </div>
+</div>
+<style>
+  .frow{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:rgba(255,255,255,.02)}
+  .frow .fname{flex:1}.frow .fhint{color:var(--mut);font-size:11px}
+  .frow .ftrig{font-size:11px;padding:5px 9px;border:1px solid var(--line);background:var(--bg1);border-radius:8px;color:var(--cy)}
+  .frow .fmark{display:flex;gap:5px}
+  .frow .fmark button{width:30px;height:28px;border:1px solid var(--line);background:var(--bg1);border-radius:7px}
+  .frow .fmark button.ok.on{background:rgba(16,185,129,.25);border-color:var(--em)}
+  .frow .fmark button.no.on{background:rgba(239,68,68,.25);border-color:var(--bad)}
+</style>
+
+<!-- Test térmico -->
+<div class="modal-bg" id="mtherm">
+  <div class="modal" style="width:min(580px,94vw)">
+    <h2>🌡️ Test de estrés térmico</h2>
+    <div class="note" id="thermStatus">Cargando todos los núcleos y midiendo la temperatura en tiempo real…</div>
+    <svg id="thermChart" viewBox="0 0 520 180" preserveAspectRatio="none" style="width:100%;height:180px;background:var(--bg1);border:1px solid var(--line);border-radius:10px;margin-top:8px"></svg>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:6px"><span id="thNow">—</span><span id="thMax">máx —</span></div>
+    <div class="foot"><button class="btn primary" id="thermClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Historial -->
+<div class="modal-bg" id="mhist">
+  <div class="modal" style="width:min(520px,94vw)">
+    <h2>🕘 Certificados emitidos</h2>
+    <div id="histList" style="max-height:50vh;overflow:auto;margin-top:8px"></div>
+    <div class="foot"><button class="btn primary" id="histClose">Cerrar</button></div>
+  </div>
+</div>
+
+<style>
+  .vactions{display:flex;gap:8px;margin-top:10px;width:100%}
+  .vactions .ic-btn{flex:1;width:auto;height:auto;padding:9px;font-size:12.5px;font-weight:600}
+  .hrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:rgba(255,255,255,.02)}
+  .hrow .n{font-family:Consolas,monospace;font-size:12.5px}
+  .hrow .o{color:var(--cy);cursor:pointer;font-size:12px}
+</style>
+<!-- Acerca de / Apoyo -->
+<div class="modal-bg" id="mabout">
+  <div class="modal" style="width:min(470px,94vw)">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <svg width="40" height="40" viewBox="0 0 48 48"><defs><linearGradient id="al" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs><path d="M24 3 L40 9 V24 C40 35 33 42 24 45 C15 42 8 35 8 24 V9 Z" fill="url(#al)"/><path d="M15.5 24.5 l6 6 l11.5 -13.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h2 style="margin:0">OptiCert</h2><div style="color:var(--mut);font-size:12px">por <b>Enmanuel Gil</b> · Suite <b>OptiSuite</b></div></div>
+    </div>
+    <p style="color:var(--mut);font-size:13px;margin:4px 0 12px">Diagnóstico, grading y certificado firmado para móviles usados. <b>Gratis</b>, sin anuncios ni telemetría. Tus datos no salen del equipo.</p>
+    <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:0 0 6px">Páginas</h3>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <button class="btn" data-link="https://optisuite.app" style="text-align:left">🌐 optisuite.app — todas las herramientas</button>
+      <button class="btn" data-link="https://github.com/EnMaNueL-G/opticert" style="text-align:left">💻 Código en GitHub (OptiCert)</button>
+      <button class="btn" data-link="https://github.com/EnMaNueL-G" style="text-align:left">👤 Perfil de GitHub — EnMaNueL-G</button>
+    </div>
+    <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:14px 0 6px">🤝 Colaborar (opcional)</h3>
+    <p style="color:var(--mut);font-size:12px;margin:0 0 8px">Si esta herramienta te ayuda, puedes apoyar el proyecto. ¡Gracias!</p>
+    <div class="frow"><div class="fname">Binance Pay ID<div class="fhint">1140153333</div></div><button class="ftrig" data-copy2="1140153333">copiar</button></div>
+    <div class="frow"><div class="fname">BSC (BEP20)<div class="fhint" style="word-break:break-all">0x0a9a0d8d816ede885d1d4a5c94369a72ef86b3c1</div></div><button class="ftrig" data-copy2="0x0a9a0d8d816ede885d1d4a5c94369a72ef86b3c1">copiar</button></div>
+    <div class="foot"><button class="btn primary" id="aboutClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Cámara en vivo -->
+<div class="modal-bg" id="mcam">
+  <div class="modal" style="width:min(440px,94vw)">
+    <h2>📷 Cámara en vivo</h2>
+    <img id="camImg" style="width:100%;border:1px solid var(--line);border-radius:10px;background:#000;min-height:200px;object-fit:contain" alt="visor">
+    <div class="note">Es el visor real del móvil. Para probar la <b>otra cámara</b>, pulsa el botón de cambiar cámara <b>en el móvil</b> y se actualiza aquí al instante. Marca ✓/✗ en Funcional.</div>
+    <div class="foot"><button class="btn primary" id="camClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- WiFi / Bluetooth en vivo -->
+<div class="modal-bg" id="mnet">
+  <div class="modal" style="width:min(580px,95vw)">
+    <h2>📶 WiFi / Bluetooth en vivo</h2>
+    <svg id="netChart" viewBox="0 0 520 150" preserveAspectRatio="none" style="width:100%;height:150px;background:var(--bg1);border:1px solid var(--line);border-radius:10px"></svg>
+    <div id="netInfo" class="note" style="line-height:1.7">Midiendo señal…</div>
+    <div class="foot"><button class="btn primary" id="netClose">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- Botones físicos en vivo -->
+<div class="modal-bg" id="mbtn">
+  <div class="modal" style="width:min(440px,94vw)">
+    <h2>⌨ Botones físicos</h2>
+    <div class="note">Pulsa cada botón en el móvil: se marcará aquí al instante.</div>
+    <div id="btnList" style="margin-top:10px"></div>
+    <div class="foot"><span id="btnSummary" style="margin-right:auto;color:var(--mut);font-size:12.5px"></span><button class="btn" id="btnClose">Cerrar</button><button class="btn primary" id="btnMark">Guardar resultado</button></div>
+  </div>
+</div>
+
+<!-- Consola ADB -->
+<div class="modal-bg" id="mcon">
+  <div class="modal" style="width:min(640px,95vw)">
+    <h2>&gt;_ Consola ADB</h2>
+    <div class="note">Ejecuta comandos en el equipo seleccionado. Para probar el táctil: usa los atajos o escribe <code>input tap X Y</code>, <code>input swipe X1 Y1 X2 Y2</code>.</div>
+    <div class="row" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">
+      <button class="btn" data-cmd="input tap 540 1000">tap centro</button>
+      <button class="btn" data-cmd="input swipe 200 1000 900 1000 300">swipe →</button>
+      <button class="btn" data-cmd="input keyevent KEYCODE_VOLUME_UP">vol+</button>
+      <button class="btn" data-cmd="input keyevent 26">power</button>
+      <button class="btn" data-cmd="getevent -lt -c 1">leer 1 toque</button>
+      <button class="btn" data-cmd="wm size; wm density">pantalla</button>
+      <button class="btn" data-cmd="dumpsys battery">batería</button>
+    </div>
+    <div class="row" style="display:flex;gap:8px"><input id="conInput" placeholder="comando shell… (Enter para ejecutar)" style="flex:1"><button class="btn primary" id="conRun">Ejecutar</button></div>
+    <pre id="conOut" style="background:var(--bg1);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;max-height:40vh;overflow:auto;font:12px/1.5 Consolas,monospace;color:#9fe7c9;white-space:pre-wrap;word-break:break-word"></pre>
+    <div class="foot"><button class="btn primary" id="conClose">Cerrar</button></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
